@@ -11,3 +11,5 @@ rrd_format=$(config_get "RRD_FORMAT")
 echo "[+] Creating RRD file $OUTPUT_FILE"
 
 rrdtool create "$OUTPUT_FILE" --step "$rrd_step" $rrd_format
+
+echo "[+] Saved RRD file $OUTPUT_FILE"

@@ -12,7 +12,7 @@ commands:
     short: -c
     arg: configFile
     help: RRD config file
-  - long: --read
+  - long: --pcap
     short: -r
     arg: pcapFile
     help: Pcap file

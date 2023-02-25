@@ -20,7 +20,9 @@ rrdtool graph "$OUTPUT_FILE" -w "$rrd_width" -h "$rrd_height" \
     --imgformat "$rrd_img_format" --start "$rrd_start" \
     --end "$rrd_end" $rrd_graph 1>/dev/null
 
-if $( validate_file_exists "$OUTPUT_FILE" );
+if eval validate_file_exists "$OUTPUT_FILE" && ! eval validate_not_empty "$OUTPUT_FILE";
 then
     echo "[+] Saved RRD graph: $OUTPUT_FILE"
+else
+    echo "[!] An error occurred generating the RRD graph"
 fi

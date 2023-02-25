@@ -84,7 +84,7 @@ rrdcap_generate_usage() {
     echo
 
     # :flag.usage
-    printf "  %s\n" "--read, -r PCAPFILE (required)"
+    printf "  %s\n" "--pcap, -r PCAPFILE (required)"
     printf "    Pcap file\n"
     echo
 
@@ -193,14 +193,38 @@ inspect_args() {
   fi
 }
 
+# :command.user_lib
+# src/lib/validations/validate_dir_exists.sh
+validate_dir_exists() {
+  [[ -d "$1" ]] || echo "must be an existing directory"
+}
+
+# src/lib/validations/validate_file_exists.sh
+validate_file_exists() {
+  [[ -f "$1" ]] || echo "must be an existing file"
+}
+
+# src/lib/validations/validate_integer.sh
+validate_integer() {
+  [[ "$1" =~ ^[0-9]+$ ]] || echo "must be an integer"
+}
+
+# src/lib/validations/validate_not_empty.sh
+validate_not_empty() {
+  [[ -z "$1" ]] && echo "must not be empty"
+}
+
 # :command.command_functions
 # :command.function
 rrdcap_generate_command() {
   # src/generate_command.sh
-  echo "# this file is located in 'src/generate_command.sh'"
-  echo "# code for 'rrdcap generate' goes here"
-  echo "# you can edit it freely and regenerate (it will not be overwritten)"
-  inspect_args
+  # This tool is part of the Stratosphere Laboratory, AIC, FEL, CTU in Prague
+  # Contact: stratosphere@aic.fel.cvut.cz
+
+  PCAP_FILE=${args[--pcap]}
+  RRD_CONFIG=${args[--config]}
+
+  echo "[+] Creating RRD file for packet capture: $PCAP_FILE"
 
 }
 
@@ -334,16 +358,16 @@ rrdcap_generate_parse_requirements() {
         ;;
 
       # :flag.case
-      --read | -r)
+      --pcap | -r)
 
         # :flag.case_arg
         if [[ -n ${2+x} ]]; then
 
-          args['--read']="$2"
+          args['--pcap']="$2"
           shift
           shift
         else
-          printf "%s\n" "--read requires an argument: --read, -r PCAPFILE" >&2
+          printf "%s\n" "--pcap requires an argument: --pcap, -r PCAPFILE" >&2
           exit 1
         fi
         ;;
@@ -365,8 +389,8 @@ rrdcap_generate_parse_requirements() {
   done
 
   # :command.required_flags_filter
-  if [[ -z ${args['--read']+x} ]]; then
-    printf "missing required flag: --read, -r PCAPFILE\n" >&2
+  if [[ -z ${args['--pcap']+x} ]]; then
+    printf "missing required flag: --pcap, -r PCAPFILE\n" >&2
     exit 1
   fi
 

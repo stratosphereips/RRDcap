@@ -1,4 +1,7 @@
-echo "# this file is located in 'src/generate_command.sh'"
-echo "# code for 'rrdcap generate' goes here"
-echo "# you can edit it freely and regenerate (it will not be overwritten)"
-inspect_args
+# This tool is part of the Stratosphere Laboratory, AIC, FEL, CTU in Prague
+# Contact: stratosphere@aic.fel.cvut.cz
+
+PCAP_FILE=${args[--pcap]}
+RRD_CONFIG=${args[--config]}
+
+echo "[+] Creating RRD file for packet capture: $PCAP_FILE"

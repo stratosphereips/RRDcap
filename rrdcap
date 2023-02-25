@@ -34,6 +34,7 @@ rrdcap_usage() {
   echo
   # :command.usage_commands
   printf "%s\n" "Commands:"
+  printf "  %s   Initialize an RRD file\n" "init    "
   printf "  %s   Generate an RRD file from a pcap capture\n" "generate"
   printf "  %s   Export a PNG graph from the RRD file\n" "export  "
   echo
@@ -48,6 +49,51 @@ rrdcap_usage() {
     echo
     printf "  %s\n" "--version, -v"
     printf "    Show version number\n"
+    echo
+
+  fi
+}
+
+# :command.usage
+rrdcap_init_usage() {
+  if [[ -n $long_usage ]]; then
+    printf "rrdcap init - Initialize an RRD file\n"
+    echo
+
+  else
+    printf "rrdcap init - Initialize an RRD file\n"
+    echo
+
+  fi
+
+  printf "%s\n" "Usage:"
+  printf "  rrdcap init [OPTIONS]\n"
+  printf "  rrdcap init --help | -h\n"
+  echo
+
+  # :command.long_usage
+  if [[ -n $long_usage ]]; then
+    printf "%s\n" "Options:"
+
+    # :command.usage_flags
+    # :flag.usage
+    printf "  %s\n" "--config, -c CONFIGFILE"
+    printf "    RRD config file\n"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "--output, -o OUTPUTFILE (required)"
+    printf "    Output RRD binary file\n"
+    echo
+
+    # :command.usage_fixed_flags
+    printf "  %s\n" "--help, -h"
+    printf "    Show this help\n"
+    echo
+
+    # :command.usage_examples
+    printf "%s\n" "Examples:"
+    printf "  RRDcap init -c rrd.config -o capture.rrd\n"
     echo
 
   fi
@@ -86,6 +132,11 @@ rrdcap_generate_usage() {
     # :flag.usage
     printf "  %s\n" "--pcap, -r PCAPFILE (required)"
     printf "    Pcap file\n"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "--output, -o OUTPUTFILE (required)"
+    printf "    Output RRD binary file\n"
     echo
 
     # :command.usage_fixed_flags
@@ -312,21 +363,30 @@ validate_not_empty() {
 
 # :command.command_functions
 # :command.function
-rrdcap_generate_command() {
-  # src/generate_command.sh
+rrdcap_init_command() {
+  # src/init_command.sh
   # This tool is part of the Stratosphere Laboratory, AIC, FEL, CTU in Prague
   # Contact: stratosphere@aic.fel.cvut.cz
 
-  PCAP_FILE=${args[--pcap]}
   CONFIG_FILE=${args[--config]}
+  OUTPUT_FILE=${args[--output]}
 
   # Get RRD parameters from config file
   rrd_step=$(config_get "STEP")
   rrd_format=$(config_get "RRD_FORMAT")
 
-  echo "[+] Creating RRD file for packet capture: $PCAP_FILE"
-  echo "[+] RRD step configuration: $rrd_step"
-  echo "[+] RRD format configuration: $rrd_format"
+  echo "[+] Creating RRD file $OUTPUT_FILE"
+
+  rrdtool create "$OUTPUT_FILE" --step "$rrd_step" $rrd_format
+
+}
+
+# :command.function
+rrdcap_generate_command() {
+  # src/generate_command.sh
+  # This tool is part of the Stratosphere Laboratory, AIC, FEL, CTU in Prague
+  # Contact: stratosphere@aic.fel.cvut.cz
+  :
 
 }
 
@@ -368,6 +428,13 @@ parse_requirements() {
 
   case $action in
     -*) ;;
+
+    init)
+      action="init"
+      shift
+      rrdcap_init_parse_requirements "$@"
+      shift $#
+      ;;
 
     generate | gen)
       action="generate"
@@ -416,6 +483,97 @@ parse_requirements() {
 
     esac
   done
+
+}
+
+# :command.parse_requirements
+rrdcap_init_parse_requirements() {
+  # :command.fixed_flags_filter
+  while [[ $# -gt 0 ]]; do
+    case "${1:-}" in
+      --help | -h)
+        long_usage=yes
+        rrdcap_init_usage
+        exit
+        ;;
+
+      *)
+        break
+        ;;
+
+    esac
+  done
+
+  # :command.dependencies_filter
+  if ! command -v rrdtool >/dev/null 2>&1; then
+    printf "missing dependency: rrdtool\n" >&2
+    printf "%s\n" "sudo apt install -y rrdtool" >&2
+    exit 1
+  fi
+
+  # :command.command_filter
+  action="init"
+
+  # :command.parse_requirements_while
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+      # :flag.case
+      --config | -c)
+
+        # :flag.case_arg
+        if [[ -n ${2+x} ]]; then
+          # :flag.validations
+          if [[ -n $(validate_file_exists "$2") ]]; then
+            printf "validation error in %s:\n%s\n" "--config, -c CONFIGFILE" "$(validate_file_exists "$2")" >&2
+            exit 1
+          fi
+
+          args['--config']="$2"
+          shift
+          shift
+        else
+          printf "%s\n" "--config requires an argument: --config, -c CONFIGFILE" >&2
+          exit 1
+        fi
+        ;;
+
+      # :flag.case
+      --output | -o)
+
+        # :flag.case_arg
+        if [[ -n ${2+x} ]]; then
+
+          args['--output']="$2"
+          shift
+          shift
+        else
+          printf "%s\n" "--output requires an argument: --output, -o OUTPUTFILE" >&2
+          exit 1
+        fi
+        ;;
+
+      -?*)
+        printf "invalid option: %s\n" "$key" >&2
+        exit 1
+        ;;
+
+      *)
+        # :command.parse_requirements_case
+        # :command.parse_requirements_case_simple
+        printf "invalid argument: %s\n" "$key" >&2
+        exit 1
+
+        ;;
+
+    esac
+  done
+
+  # :command.required_flags_filter
+  if [[ -z ${args['--output']+x} ]]; then
+    printf "missing required flag: --output, -o OUTPUTFILE\n" >&2
+    exit 1
+  fi
 
 }
 
@@ -491,6 +649,21 @@ rrdcap_generate_parse_requirements() {
         fi
         ;;
 
+      # :flag.case
+      --output | -o)
+
+        # :flag.case_arg
+        if [[ -n ${2+x} ]]; then
+
+          args['--output']="$2"
+          shift
+          shift
+        else
+          printf "%s\n" "--output requires an argument: --output, -o OUTPUTFILE" >&2
+          exit 1
+        fi
+        ;;
+
       -?*)
         printf "invalid option: %s\n" "$key" >&2
         exit 1
@@ -510,6 +683,10 @@ rrdcap_generate_parse_requirements() {
   # :command.required_flags_filter
   if [[ -z ${args['--pcap']+x} ]]; then
     printf "missing required flag: --pcap, -r PCAPFILE\n" >&2
+    exit 1
+  fi
+  if [[ -z ${args['--output']+x} ]]; then
+    printf "missing required flag: --output, -o OUTPUTFILE\n" >&2
     exit 1
   fi
 
@@ -625,6 +802,15 @@ run() {
   parse_requirements "${input[@]}"
 
   case "$action" in
+    "init")
+      if [[ ${args['--help']:-} ]]; then
+        long_usage=yes
+        rrdcap_init_usage
+      else
+        rrdcap_init_command
+      fi
+      ;;
+
     "generate")
       if [[ ${args['--help']:-} ]]; then
         long_usage=yes

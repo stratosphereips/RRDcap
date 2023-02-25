@@ -3,6 +3,27 @@ help: A tool to monitor packet capture (pcap) files using RRD
 version: 0.1.0
 
 commands:
+- name: init
+  help: Initialize an RRD file
+
+  flags:
+  - long: --config
+    short: -c
+    arg: configFile
+    help: RRD config file
+    validate: file_exists
+  - long: --output
+    short: -o
+    arg: outputFile
+    help: Output RRD binary file
+    required: true
+
+  dependencies:
+    rrdtool: sudo apt install -y rrdtool
+
+  examples:
+  - RRDcap init -c rrd.config -o capture.rrd
+
 - name: generate
   alias: gen
   help: Generate an RRD file from a pcap capture
@@ -22,7 +43,7 @@ commands:
   - long: --output
     short: -o
     arg: outputFile
-    help: Output PNG file to store the RRD graph
+    help: Output RRD binary file
     required: true
 
   dependencies:

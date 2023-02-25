@@ -18,6 +18,9 @@ commands:
     help: Pcap file
     required: true
 
+  dependencies:
+  - rrdtool 
+
   examples:
   - RRDcap generate -c rrd.config -r capture.pcap
 
@@ -35,6 +38,9 @@ commands:
     short: -o
     arg: outputFile
     help: Output PNG file to store the RRD graph
+
+  dependencies:
+  - rrdtool 
 
   examples:
   - RRDcap export -f capture.rrd -o capture.png

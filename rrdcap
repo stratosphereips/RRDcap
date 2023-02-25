@@ -437,6 +437,12 @@ rrdcap_generate_parse_requirements() {
     esac
   done
 
+  # :command.dependencies_filter
+  if ! command -v rrdtool >/dev/null 2>&1; then
+    printf "missing dependency: rrdtool\n" >&2
+    exit 1
+  fi
+
   # :command.command_filter
   action="generate"
 
@@ -515,6 +521,12 @@ rrdcap_export_parse_requirements() {
 
     esac
   done
+
+  # :command.dependencies_filter
+  if ! command -v rrdtool >/dev/null 2>&1; then
+    printf "missing dependency: rrdtool\n" >&2
+    exit 1
+  fi
 
   # :command.command_filter
   action="export"

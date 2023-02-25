@@ -1,0 +1,41 @@
+name: rrdcap
+help: A tool to monitor packet capture (pcap) files using RRD
+version: 0.1.0
+
+commands:
+- name: generate
+  alias: gen
+  help: Generate an RRD file from a pcap capture
+
+  flags:
+  - long: --config
+    short: -c
+    arg: configFile
+    help: RRD config file
+  - long: --read
+    short: -r
+    arg: pcapFile
+    help: Pcap file
+    required: true
+
+  examples:
+  - RRDcap generate -c rrd.config -r capture.pcap
+
+- name: export
+  alias: exp
+  help: Export a PNG graph from the RRD file
+
+  flags:
+  - long: --rrd
+    short: -f
+    arg: rrdFile
+    help: Capture RRD file
+    required: true
+  - long: --output
+    short: -o
+    arg: outputFile
+    help: Output PNG file to store the RRD graph
+
+  examples:
+  - RRDcap export -f capture.rrd -o capture.png
+

@@ -35,6 +35,7 @@ rrdcap_usage() {
   # :command.usage_commands
   printf "%s\n" "Commands:"
   printf "  %s   Initialize an RRD file\n" "init    "
+  printf "  %s   Process a pcap file to generate an Argus binary file\n" "process "
   printf "  %s   Generate an RRD file from a pcap capture\n" "generate"
   printf "  %s   Export a PNG graph from the RRD file\n" "export  "
   echo
@@ -93,7 +94,57 @@ rrdcap_init_usage() {
 
     # :command.usage_examples
     printf "%s\n" "Examples:"
-    printf "  RRDcap init -c rrd.config -o capture.rrd\n"
+    printf "  rrdcap init -c rrd.config -o capture.rrd\n"
+    echo
+
+  fi
+}
+
+# :command.usage
+rrdcap_process_usage() {
+  if [[ -n $long_usage ]]; then
+    printf "rrdcap process - Process a pcap file to generate an Argus binary file\n"
+    echo
+
+  else
+    printf "rrdcap process - Process a pcap file to generate an Argus binary file\n"
+    echo
+
+  fi
+
+  printf "%s\n" "Usage:"
+  printf "  rrdcap process [OPTIONS]\n"
+  printf "  rrdcap process --help | -h\n"
+  echo
+
+  # :command.long_usage
+  if [[ -n $long_usage ]]; then
+    printf "%s\n" "Options:"
+
+    # :command.usage_flags
+    # :flag.usage
+    printf "  %s\n" "--config, -c CONFIGFILE"
+    printf "    Argus configuration file\n"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "--pcap, -r PCAPFILE (required)"
+    printf "    Pcap file\n"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "--output, -o OUTPUTFILE (required)"
+    printf "    Output an Argus binary file\n"
+    echo
+
+    # :command.usage_fixed_flags
+    printf "  %s\n" "--help, -h"
+    printf "    Show this help\n"
+    echo
+
+    # :command.usage_examples
+    printf "%s\n" "Examples:"
+    printf "  rrdcap process -c argus.conf -r capture.pcap -o capture.biargus\n"
     echo
 
   fi
@@ -146,7 +197,7 @@ rrdcap_generate_usage() {
 
     # :command.usage_examples
     printf "%s\n" "Examples:"
-    printf "  RRDcap generate -c rrd.config -r capture.pcap\n"
+    printf "  rrdcap generate -c rrd.config -r capture.pcap\n"
     echo
 
   fi
@@ -199,7 +250,7 @@ rrdcap_export_usage() {
 
     # :command.usage_examples
     printf "%s\n" "Examples:"
-    printf "  RRDcap export -f capture.rrd -o capture.png\n"
+    printf "  rrdcap export -f capture.rrd -o capture.png\n"
     echo
 
   fi
@@ -389,6 +440,29 @@ rrdcap_init_command() {
 }
 
 # :command.function
+rrdcap_process_command() {
+  # src/process_command.sh
+  # This tool is part of the Stratosphere Laboratory, AIC, FEL, CTU in Prague
+  # Contact: stratosphere@aic.fel.cvut.cz
+
+  CONFIG_FILE=${args[--config]}
+  PCAP_FILE=${args[--pcap]}
+  OUTPUT_FILE=${args[--output]}
+
+  echo "[+] Generating Argus binary files for pcap: $PCAP_FILE"
+
+  argus -F "$CONFIG_FILE" -r "$PCAP_FILE" -w "$OUTPUT_FILE"
+
+  if eval validate_file_exists "$OUTPUT_FILE" && ! eval validate_not_empty "$OUTPUT_FILE";
+  then
+      echo "[+] Saved .biargus file: $OUTPUT_FILE"
+  else
+      echo "[!] An error occurred generating the biargus file"
+  fi
+
+}
+
+# :command.function
 rrdcap_generate_command() {
   # src/generate_command.sh
   # This tool is part of the Stratosphere Laboratory, AIC, FEL, CTU in Prague
@@ -422,9 +496,11 @@ rrdcap_export_command() {
       --imgformat "$rrd_img_format" --start "$rrd_start" \
       --end "$rrd_end" $rrd_graph 1>/dev/null
 
-  if $( validate_file_exists "$OUTPUT_FILE" );
+  if eval validate_file_exists "$OUTPUT_FILE" && ! eval validate_not_empty "$OUTPUT_FILE";
   then
       echo "[+] Saved RRD graph: $OUTPUT_FILE"
+  else
+      echo "[!] An error occurred generating the RRD graph"
   fi
 
 }
@@ -462,6 +538,13 @@ parse_requirements() {
       action="init"
       shift
       rrdcap_init_parse_requirements "$@"
+      shift $#
+      ;;
+
+    process)
+      action="process"
+      shift
+      rrdcap_process_parse_requirements "$@"
       shift $#
       ;;
 
@@ -599,6 +682,121 @@ rrdcap_init_parse_requirements() {
   done
 
   # :command.required_flags_filter
+  if [[ -z ${args['--output']+x} ]]; then
+    printf "missing required flag: --output, -o OUTPUTFILE\n" >&2
+    exit 1
+  fi
+
+}
+
+# :command.parse_requirements
+rrdcap_process_parse_requirements() {
+  # :command.fixed_flags_filter
+  while [[ $# -gt 0 ]]; do
+    case "${1:-}" in
+      --help | -h)
+        long_usage=yes
+        rrdcap_process_usage
+        exit
+        ;;
+
+      *)
+        break
+        ;;
+
+    esac
+  done
+
+  # :command.dependencies_filter
+  if ! command -v argus >/dev/null 2>&1; then
+    printf "missing dependency: argus\n" >&2
+    printf "%s\n" "sudo apt install -y argus-client" >&2
+    exit 1
+  fi
+
+  # :command.command_filter
+  action="process"
+
+  # :command.parse_requirements_while
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+      # :flag.case
+      --config | -c)
+
+        # :flag.case_arg
+        if [[ -n ${2+x} ]]; then
+          # :flag.validations
+          if [[ -n $(validate_file_exists "$2") ]]; then
+            printf "validation error in %s:\n%s\n" "--config, -c CONFIGFILE" "$(validate_file_exists "$2")" >&2
+            exit 1
+          fi
+
+          args['--config']="$2"
+          shift
+          shift
+        else
+          printf "%s\n" "--config requires an argument: --config, -c CONFIGFILE" >&2
+          exit 1
+        fi
+        ;;
+
+      # :flag.case
+      --pcap | -r)
+
+        # :flag.case_arg
+        if [[ -n ${2+x} ]]; then
+          # :flag.validations
+          if [[ -n $(validate_file_exists "$2") ]]; then
+            printf "validation error in %s:\n%s\n" "--pcap, -r PCAPFILE" "$(validate_file_exists "$2")" >&2
+            exit 1
+          fi
+
+          args['--pcap']="$2"
+          shift
+          shift
+        else
+          printf "%s\n" "--pcap requires an argument: --pcap, -r PCAPFILE" >&2
+          exit 1
+        fi
+        ;;
+
+      # :flag.case
+      --output | -o)
+
+        # :flag.case_arg
+        if [[ -n ${2+x} ]]; then
+
+          args['--output']="$2"
+          shift
+          shift
+        else
+          printf "%s\n" "--output requires an argument: --output, -o OUTPUTFILE" >&2
+          exit 1
+        fi
+        ;;
+
+      -?*)
+        printf "invalid option: %s\n" "$key" >&2
+        exit 1
+        ;;
+
+      *)
+        # :command.parse_requirements_case
+        # :command.parse_requirements_case_simple
+        printf "invalid argument: %s\n" "$key" >&2
+        exit 1
+
+        ;;
+
+    esac
+  done
+
+  # :command.required_flags_filter
+  if [[ -z ${args['--pcap']+x} ]]; then
+    printf "missing required flag: --pcap, -r PCAPFILE\n" >&2
+    exit 1
+  fi
   if [[ -z ${args['--output']+x} ]]; then
     printf "missing required flag: --output, -o OUTPUTFILE\n" >&2
     exit 1
@@ -861,6 +1059,15 @@ run() {
         rrdcap_init_usage
       else
         rrdcap_init_command
+      fi
+      ;;
+
+    "process")
+      if [[ ${args['--help']:-} ]]; then
+        long_usage=yes
+        rrdcap_process_usage
+      else
+        rrdcap_process_command
       fi
       ;;
 

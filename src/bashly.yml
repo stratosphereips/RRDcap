@@ -52,32 +52,34 @@ commands:
   - rrdcap process -c argus.conf -r capture.pcap -o capture.biargus
 
 - name: generate
-  alias: gen
   help: Generate an RRD file from a pcap capture
 
   flags:
   - long: --config
     short: -c
     arg: configFile
-    help: RRD config file
+    help: ra config file
     validate: file_exists
-  - long: --pcap
+    required: true
+  - long: --biargus
     short: -r
-    arg: pcapFile
-    help: Pcap file
+    arg: biargusFile
+    help: Argus binary file
     required: true
     validate: file_exists
-  - long: --output
+  - long: --rrd
     short: -o
     arg: outputFile
     help: Output RRD binary file
     required: true
 
   dependencies:
+    ra: sudo apt install -y argus-client
+    BotSummarizer.py: https://github.com/stratosphereips/botsummarizer
     rrdtool: sudo apt install -y rrdtool
 
   examples:
-  - rrdcap generate -c rrd.config -r capture.pcap
+  - rrdcap generate -c ra.conf -r capture.biargus -o capture.rrd
 
 - name: export
   alias: exp

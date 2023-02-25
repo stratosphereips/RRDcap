@@ -162,9 +162,6 @@ rrdcap_generate_usage() {
 
   fi
 
-  printf "Alias: gen\n"
-  echo
-
   printf "%s\n" "Usage:"
   printf "  rrdcap generate [OPTIONS]\n"
   printf "  rrdcap generate --help | -h\n"
@@ -176,17 +173,17 @@ rrdcap_generate_usage() {
 
     # :command.usage_flags
     # :flag.usage
-    printf "  %s\n" "--config, -c CONFIGFILE"
-    printf "    RRD config file\n"
+    printf "  %s\n" "--config, -c CONFIGFILE (required)"
+    printf "    ra config file\n"
     echo
 
     # :flag.usage
-    printf "  %s\n" "--pcap, -r PCAPFILE (required)"
-    printf "    Pcap file\n"
+    printf "  %s\n" "--biargus, -r BIARGUSFILE (required)"
+    printf "    Argus binary file\n"
     echo
 
     # :flag.usage
-    printf "  %s\n" "--output, -o OUTPUTFILE (required)"
+    printf "  %s\n" "--rrd, -o OUTPUTFILE (required)"
     printf "    Output RRD binary file\n"
     echo
 
@@ -197,7 +194,7 @@ rrdcap_generate_usage() {
 
     # :command.usage_examples
     printf "%s\n" "Examples:"
-    printf "  rrdcap generate -c rrd.config -r capture.pcap\n"
+    printf "  rrdcap generate -c ra.conf -r capture.biargus -o capture.rrd\n"
     echo
 
   fi
@@ -467,7 +464,17 @@ rrdcap_generate_command() {
   # src/generate_command.sh
   # This tool is part of the Stratosphere Laboratory, AIC, FEL, CTU in Prague
   # Contact: stratosphere@aic.fel.cvut.cz
-  :
+
+  RACONFIG_FILE=${args[--config]}
+  BIGARGUS_FILE=${args[--biargus]}
+
+  RRD_FILE=${args[--rrd]}
+
+  echo "[+] Updating $RRD_FILE with data from $BIGARGUS_FILE"
+
+  ra -F "$RACONFIG_FILE" -n -Z b -r "$BIARGUS_FILE" | BotSummarizer.py -l -w 1 -r "$RRDFILE" -f - | rrdtool -
+
+  echo "[+] Finished updating: $RRD_FILE"
 
 }
 
@@ -548,7 +555,7 @@ parse_requirements() {
       shift $#
       ;;
 
-    generate | gen)
+    generate)
       action="generate"
       shift
       rrdcap_generate_parse_requirements "$@"
@@ -823,6 +830,18 @@ rrdcap_generate_parse_requirements() {
   done
 
   # :command.dependencies_filter
+  if ! command -v ra >/dev/null 2>&1; then
+    printf "missing dependency: ra\n" >&2
+    printf "%s\n" "sudo apt install -y argus-client" >&2
+    exit 1
+  fi
+
+  if ! command -v BotSummarizer.py >/dev/null 2>&1; then
+    printf "missing dependency: BotSummarizer.py\n" >&2
+    printf "%s\n" "https://github.com/stratosphereips/botsummarizer" >&2
+    exit 1
+  fi
+
   if ! command -v rrdtool >/dev/null 2>&1; then
     printf "missing dependency: rrdtool\n" >&2
     printf "%s\n" "sudo apt install -y rrdtool" >&2
@@ -857,36 +876,36 @@ rrdcap_generate_parse_requirements() {
         ;;
 
       # :flag.case
-      --pcap | -r)
+      --biargus | -r)
 
         # :flag.case_arg
         if [[ -n ${2+x} ]]; then
           # :flag.validations
           if [[ -n $(validate_file_exists "$2") ]]; then
-            printf "validation error in %s:\n%s\n" "--pcap, -r PCAPFILE" "$(validate_file_exists "$2")" >&2
+            printf "validation error in %s:\n%s\n" "--biargus, -r BIARGUSFILE" "$(validate_file_exists "$2")" >&2
             exit 1
           fi
 
-          args['--pcap']="$2"
+          args['--biargus']="$2"
           shift
           shift
         else
-          printf "%s\n" "--pcap requires an argument: --pcap, -r PCAPFILE" >&2
+          printf "%s\n" "--biargus requires an argument: --biargus, -r BIARGUSFILE" >&2
           exit 1
         fi
         ;;
 
       # :flag.case
-      --output | -o)
+      --rrd | -o)
 
         # :flag.case_arg
         if [[ -n ${2+x} ]]; then
 
-          args['--output']="$2"
+          args['--rrd']="$2"
           shift
           shift
         else
-          printf "%s\n" "--output requires an argument: --output, -o OUTPUTFILE" >&2
+          printf "%s\n" "--rrd requires an argument: --rrd, -o OUTPUTFILE" >&2
           exit 1
         fi
         ;;
@@ -908,12 +927,16 @@ rrdcap_generate_parse_requirements() {
   done
 
   # :command.required_flags_filter
-  if [[ -z ${args['--pcap']+x} ]]; then
-    printf "missing required flag: --pcap, -r PCAPFILE\n" >&2
+  if [[ -z ${args['--config']+x} ]]; then
+    printf "missing required flag: --config, -c CONFIGFILE\n" >&2
     exit 1
   fi
-  if [[ -z ${args['--output']+x} ]]; then
-    printf "missing required flag: --output, -o OUTPUTFILE\n" >&2
+  if [[ -z ${args['--biargus']+x} ]]; then
+    printf "missing required flag: --biargus, -r BIARGUSFILE\n" >&2
+    exit 1
+  fi
+  if [[ -z ${args['--rrd']+x} ]]; then
+    printf "missing required flag: --rrd, -o OUTPUTFILE\n" >&2
     exit 1
   fi
 

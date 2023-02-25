@@ -440,6 +440,7 @@ rrdcap_generate_parse_requirements() {
   # :command.dependencies_filter
   if ! command -v rrdtool >/dev/null 2>&1; then
     printf "missing dependency: rrdtool\n" >&2
+    printf "%s\n" "sudo apt install -y rrdtool" >&2
     exit 1
   fi
 
@@ -525,6 +526,7 @@ rrdcap_export_parse_requirements() {
   # :command.dependencies_filter
   if ! command -v rrdtool >/dev/null 2>&1; then
     printf "missing dependency: rrdtool\n" >&2
+    printf "%s\n" "sudo apt install -y rrdtool" >&2
     exit 1
   fi
 

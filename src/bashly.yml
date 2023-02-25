@@ -19,7 +19,7 @@ commands:
     required: true
 
   dependencies:
-  - rrdtool 
+    rrdtool: sudo apt install -y rrdtool
 
   examples:
   - RRDcap generate -c rrd.config -r capture.pcap
@@ -40,7 +40,7 @@ commands:
     help: Output PNG file to store the RRD graph
 
   dependencies:
-  - rrdtool 
+    rrdtool: sudo apt install -y rrdtool
 
   examples:
   - RRDcap export -f capture.rrd -o capture.png

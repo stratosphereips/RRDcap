@@ -19,6 +19,11 @@ commands:
     help: Pcap file
     required: true
     validate: file_exists
+  - long: --output
+    short: -o
+    arg: outputFile
+    help: Output PNG file to store the RRD graph
+    required: true
 
   dependencies:
     rrdtool: sudo apt install -y rrdtool

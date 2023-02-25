@@ -178,12 +178,17 @@ rrdcap_export_usage() {
 
     # :command.usage_flags
     # :flag.usage
+    printf "  %s\n" "--config, -c CONFIGFILE"
+    printf "    RRD config file\n"
+    echo
+
+    # :flag.usage
     printf "  %s\n" "--rrd, -f RRDFILE (required)"
     printf "    Capture RRD file\n"
     echo
 
     # :flag.usage
-    printf "  %s\n" "--output, -o OUTPUTFILE"
+    printf "  %s\n" "--output, -o OUTPUTFILE (required)"
     printf "    Output PNG file to store the RRD graph\n"
     echo
 
@@ -395,10 +400,32 @@ rrdcap_generate_command() {
 # :command.function
 rrdcap_export_command() {
   # src/export_command.sh
-  echo "# this file is located in 'src/export_command.sh'"
-  echo "# code for 'rrdcap export' goes here"
-  echo "# you can edit it freely and regenerate (it will not be overwritten)"
-  inspect_args
+  # This tool is part of the Stratosphere Laboratory, AIC, FEL, CTU in Prague
+  # Contact: stratosphere@aic.fel.cvut.cz
+
+  RRD_FILE=${args[--rrd]}
+  OUTPUT_FILE=${args[--output]}
+
+  # Get RRD parameters from config file
+  rrd_width=$(config_get "RRD_WIDTH")
+  rrd_height=$(config_get "RRD_HEIGHT")
+  rrd_img_format=$(config_get "RRD_IMGFORMAT")
+  rrd_start=$(config_get "RRD_START")
+  rrd_end=$(config_get "RRD_END")
+  rrd_graph=$(config_get "RRD_GRAPH")
+
+  rrd_graph=$(echo "$rrd_graph" | awk -v repl="$RRD_FILE" '{gsub(/RRDFILENAME/,repl)}1')
+
+  echo "[+] Creating RRD graph: $OUTPUT_FILE"
+
+  rrdtool graph "$OUTPUT_FILE" -w "$rrd_width" -h "$rrd_height" \
+      --imgformat "$rrd_img_format" --start "$rrd_start" \
+      --end "$rrd_end" $rrd_graph 1>/dev/null
+
+  if $( validate_file_exists "$OUTPUT_FILE" );
+  then
+      echo "[+] Saved RRD graph: $OUTPUT_FILE"
+  fi
 
 }
 
@@ -727,6 +754,26 @@ rrdcap_export_parse_requirements() {
     key="$1"
     case "$key" in
       # :flag.case
+      --config | -c)
+
+        # :flag.case_arg
+        if [[ -n ${2+x} ]]; then
+          # :flag.validations
+          if [[ -n $(validate_file_exists "$2") ]]; then
+            printf "validation error in %s:\n%s\n" "--config, -c CONFIGFILE" "$(validate_file_exists "$2")" >&2
+            exit 1
+          fi
+
+          args['--config']="$2"
+          shift
+          shift
+        else
+          printf "%s\n" "--config requires an argument: --config, -c CONFIGFILE" >&2
+          exit 1
+        fi
+        ;;
+
+      # :flag.case
       --rrd | -f)
 
         # :flag.case_arg
@@ -780,6 +827,10 @@ rrdcap_export_parse_requirements() {
   # :command.required_flags_filter
   if [[ -z ${args['--rrd']+x} ]]; then
     printf "missing required flag: --rrd, -f RRDFILE\n" >&2
+    exit 1
+  fi
+  if [[ -z ${args['--output']+x} ]]; then
+    printf "missing required flag: --output, -o OUTPUTFILE\n" >&2
     exit 1
   fi
 

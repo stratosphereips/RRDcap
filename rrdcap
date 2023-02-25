@@ -379,6 +379,8 @@ rrdcap_init_command() {
 
   rrdtool create "$OUTPUT_FILE" --step "$rrd_step" $rrd_format
 
+  echo "[+] Saved RRD file $OUTPUT_FILE"
+
 }
 
 # :command.function

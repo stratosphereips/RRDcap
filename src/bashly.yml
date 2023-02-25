@@ -57,6 +57,11 @@ commands:
   help: Export a PNG graph from the RRD file
 
   flags:
+  - long: --config
+    short: -c
+    arg: configFile
+    help: RRD config file
+    validate: file_exists
   - long: --rrd
     short: -f
     arg: rrdFile
@@ -67,6 +72,7 @@ commands:
     short: -o
     arg: outputFile
     help: Output PNG file to store the RRD graph
+    required: true
 
   dependencies:
     rrdtool: sudo apt install -y rrdtool

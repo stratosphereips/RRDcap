@@ -22,7 +22,34 @@ commands:
     rrdtool: sudo apt install -y rrdtool
 
   examples:
-  - RRDcap init -c rrd.config -o capture.rrd
+  - rrdcap init -c rrd.config -o capture.rrd
+
+- name: process
+  help: Process a pcap file to generate an Argus binary file
+
+  flags:
+  - long: --config
+    short: -c
+    arg: configFile
+    help: Argus configuration file
+    validate: file_exists
+  - long: --pcap
+    short: -r
+    arg: pcapFile
+    help: Pcap file
+    required: true
+    validate: file_exists
+  - long: --output
+    short: -o
+    arg: outputFile
+    help: Output an Argus binary file
+    required: true
+
+  dependencies:
+    argus: sudo apt install -y argus-client
+
+  examples:
+  - rrdcap process -c argus.conf -r capture.pcap -o capture.biargus
 
 - name: generate
   alias: gen
@@ -50,7 +77,7 @@ commands:
     rrdtool: sudo apt install -y rrdtool
 
   examples:
-  - RRDcap generate -c rrd.config -r capture.pcap
+  - rrdcap generate -c rrd.config -r capture.pcap
 
 - name: export
   alias: exp
@@ -78,5 +105,5 @@ commands:
     rrdtool: sudo apt install -y rrdtool
 
   examples:
-  - RRDcap export -f capture.rrd -o capture.png
+  - rrdcap export -f capture.rrd -o capture.png
 

@@ -12,11 +12,13 @@ commands:
     short: -c
     arg: configFile
     help: RRD config file
+    validate: file_exists
   - long: --pcap
     short: -r
     arg: pcapFile
     help: Pcap file
     required: true
+    validate: file_exists
 
   dependencies:
     rrdtool: sudo apt install -y rrdtool
@@ -34,6 +36,7 @@ commands:
     arg: rrdFile
     help: Capture RRD file
     required: true
+    validate: file_exists
   - long: --output
     short: -o
     arg: outputFile

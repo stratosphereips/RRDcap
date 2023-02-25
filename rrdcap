@@ -456,6 +456,11 @@ rrdcap_generate_parse_requirements() {
 
         # :flag.case_arg
         if [[ -n ${2+x} ]]; then
+          # :flag.validations
+          if [[ -n $(validate_file_exists "$2") ]]; then
+            printf "validation error in %s:\n%s\n" "--config, -c CONFIGFILE" "$(validate_file_exists "$2")" >&2
+            exit 1
+          fi
 
           args['--config']="$2"
           shift
@@ -471,6 +476,11 @@ rrdcap_generate_parse_requirements() {
 
         # :flag.case_arg
         if [[ -n ${2+x} ]]; then
+          # :flag.validations
+          if [[ -n $(validate_file_exists "$2") ]]; then
+            printf "validation error in %s:\n%s\n" "--pcap, -r PCAPFILE" "$(validate_file_exists "$2")" >&2
+            exit 1
+          fi
 
           args['--pcap']="$2"
           shift
@@ -542,6 +552,11 @@ rrdcap_export_parse_requirements() {
 
         # :flag.case_arg
         if [[ -n ${2+x} ]]; then
+          # :flag.validations
+          if [[ -n $(validate_file_exists "$2") ]]; then
+            printf "validation error in %s:\n%s\n" "--rrd, -f RRDFILE" "$(validate_file_exists "$2")" >&2
+            exit 1
+          fi
 
           args['--rrd']="$2"
           shift

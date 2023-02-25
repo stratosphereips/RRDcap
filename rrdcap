@@ -194,6 +194,102 @@ inspect_args() {
 }
 
 # :command.user_lib
+# src/lib/config.sh
+config_init() {
+  CONFIG_FILE=${CONFIG_FILE:=config.ini}
+  [[ -f "$CONFIG_FILE" ]] || touch "$CONFIG_FILE"
+}
+
+config_get() {
+  local key=$1
+  local regex="^$key *= *(.+)$"
+  local value=""
+
+  config_init
+
+  while IFS= read -r line || [ -n "$line" ]; do
+    if [[ $line =~ $regex ]]; then
+      value="${BASH_REMATCH[1]}"
+      break
+    fi
+  done <"$CONFIG_FILE"
+
+  echo "$value"
+}
+
+config_set() {
+  local key=$1
+  shift
+  local value="$*"
+
+  config_init
+
+  local regex="^($key) *= *.+$"
+  local output=""
+  local found_key=""
+  local newline
+
+  while IFS= read -r line || [ -n "$line" ]; do
+    newline=$line
+    if [[ $line =~ $regex ]]; then
+      found_key="${BASH_REMATCH[1]}"
+      newline="$key = $value"
+      output="$output$newline\n"
+    elif [[ $line ]]; then
+      output="$output$line\n"
+    fi
+  done <"$CONFIG_FILE"
+
+  if [[ -z $found_key ]]; then
+    output="$output$key = $value\n"
+  fi
+
+  printf "%b\n" "$output" >"$CONFIG_FILE"
+}
+
+config_del() {
+  local key=$1
+
+  local regex="^($key) *="
+  local output=""
+
+  config_init
+
+  while IFS= read -r line || [ -n "$line" ]; do
+    if [[ $line ]] && [[ ! $line =~ $regex ]]; then
+      output="$output$line\n"
+    fi
+  done <"$CONFIG_FILE"
+
+  printf "%b\n" "$output" >"$CONFIG_FILE"
+}
+
+config_show() {
+  config_init
+  cat "$CONFIG_FILE"
+}
+
+config_keys() {
+  local regex="^([a-zA-Z0-9_\-\/\.]+) *="
+
+  config_init
+
+  local keys=()
+  local key
+
+  while IFS= read -r line || [ -n "$line" ]; do
+    if [[ $line =~ $regex ]]; then
+      key="${BASH_REMATCH[1]}"
+      keys+=("$key")
+    fi
+  done <"$CONFIG_FILE"
+  echo "${keys[@]}"
+}
+
+config_has_key() {
+  [[ $(config_get "$1") ]]
+}
+
 # src/lib/validations/validate_dir_exists.sh
 validate_dir_exists() {
   [[ -d "$1" ]] || echo "must be an existing directory"
@@ -222,9 +318,15 @@ rrdcap_generate_command() {
   # Contact: stratosphere@aic.fel.cvut.cz
 
   PCAP_FILE=${args[--pcap]}
-  RRD_CONFIG=${args[--config]}
+  CONFIG_FILE=${args[--config]}
+
+  # Get RRD parameters from config file
+  rrd_step=$(config_get "STEP")
+  rrd_format=$(config_get "RRD_FORMAT")
 
   echo "[+] Creating RRD file for packet capture: $PCAP_FILE"
+  echo "[+] RRD step configuration: $rrd_step"
+  echo "[+] RRD format configuration: $rrd_format"
 
 }
 
